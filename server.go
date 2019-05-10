@@ -97,10 +97,11 @@ func (s *Server) Listen(addr string) error {
 }
 
 func (s *Server) Accept() {
-	go s.acceptor.Accept()
 	if s.resolver != nil {
 		s.resolver.Register(s.servType, s.addr)
 	}
+	s.acceptor.Accept()
+
 }
 
 func (s *Server) OnDisconnect(f func(ctx *core.ChannelContext)) {

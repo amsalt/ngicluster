@@ -17,9 +17,11 @@ type Resolver interface {
 	Unregister(name, address string)
 
 	// RegisterSubChannel regiters new service SubChannel with name `name`.
+	// The implementation must be thread-safe.
 	RegisterSubChannel(name string, conn core.SubChannel)
 
 	// UnregisterSubChannel unregisters the service.
+	// The implementation must be thread-safe.
 	UnregisterSubChannel(name string, conn core.SubChannel)
 
 	// Resolve resolves the name and return a address list.

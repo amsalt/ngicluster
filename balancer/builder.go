@@ -2,6 +2,8 @@ package balancer
 
 import (
 	"fmt"
+
+	"github.com/amsalt/cluster/resolver"
 )
 
 // Builder creates a Balancer.
@@ -40,4 +42,23 @@ func GetBuilder(name string) Builder {
 		panic(fmt.Errorf("builder named %+v not exist", name))
 	}
 	return b
+}
+
+// WithServName creates stickiness balancer with Service name `n`
+func WithServName(n string) BuildOption {
+	return func(o interface{}) {
+		o.(*Option).Name = n
+	}
+}
+
+// WithResolver creates stickiness balancer with resolver `r`
+func WithResolver(r resolver.Resolver) BuildOption {
+	return func(o interface{}) {
+		o.(*Option).Resolver = r
+	}
+}
+
+type Option struct {
+	Name     string // the service name to resolve
+	Resolver resolver.Resolver
 }

@@ -10,7 +10,7 @@ import (
 // Balancer picks one SubChannel by apply the load balance strategy,
 type Balancer interface {
 	// Pick returns the SubChannel to be used.
-	Pick(cxt *core.ChannelContext) (conn core.SubChannel, err error)
+	Pick(ctx interface{}) (conn core.SubChannel, err error)
 
 	// ServName returns the service name of the Balancer concerned.
 	ServName() string

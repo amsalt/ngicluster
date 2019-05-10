@@ -6,7 +6,7 @@ import (
 
 	"github.com/amsalt/cluster"
 	"github.com/amsalt/cluster/balancer"
-	"github.com/amsalt/cluster/balancer/roundrobin"
+	"github.com/amsalt/cluster/balancer/stickiness"
 	"github.com/amsalt/cluster/resolver/static"
 	"github.com/amsalt/log"
 	"github.com/amsalt/nginet/core"
@@ -32,8 +32,8 @@ func TestCluster(t *testing.T) {
 		}
 	})
 
-	b := balancer.GetBuilder("roundrobin").Build(roundrobin.WithServName("game"), roundrobin.WithResolver(resolver))
-	clus := cluster.NewCluster(resolver, b)
+	b := balancer.GetBuilder("stickiness").Build(stickiness.WithServName("game"), stickiness.WithResolver(resolver))
+	clus := cluster.NewCluster(resolver)
 
 	s := clus.NewServer("game")
 	s.InitAcceptor(nil, register, processMgr)
@@ -42,8 +42,9 @@ func TestCluster(t *testing.T) {
 
 	c := cluster.NewClient()
 	c.InitConnector(nil, register, processMgr)
-	clus.AddClient("game", c)
-
+	clus.AddClient("game", c, b)
+	time.Sleep(time.Second * 2)
+	clus.Write("game", &tcpChannel{Msg: "cluster send message"})
 	time.Sleep(15 * time.Second)
 
 }

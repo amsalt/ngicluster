@@ -6,32 +6,12 @@ import (
 	"sync"
 
 	"github.com/amsalt/cluster/balancer"
-	"github.com/amsalt/cluster/resolver"
 	"github.com/amsalt/log"
 	"github.com/amsalt/nginet/core"
 )
 
 func init() {
 	balancer.Register(&builder{})
-}
-
-// WithServName creates stickiness balancer with Service name `n`
-func WithServName(n string) balancer.BuildOption {
-	return func(o interface{}) {
-		o.(*option).name = n
-	}
-}
-
-// WithResolver creates stickiness balancer with resolver `r`
-func WithResolver(r resolver.Resolver) balancer.BuildOption {
-	return func(o interface{}) {
-		o.(*option).resolver = r
-	}
-}
-
-type option struct {
-	name     string // the service name to resolve
-	resolver resolver.Resolver
 }
 
 type builder struct{}
@@ -41,7 +21,7 @@ func (*builder) Name() string {
 }
 
 func (b *builder) Build(opt ...balancer.BuildOption) balancer.Balancer {
-	opts := option{}
+	opts := balancer.Option{}
 	for _, o := range opt {
 		o(&opts)
 	}
@@ -50,21 +30,21 @@ func (b *builder) Build(opt ...balancer.BuildOption) balancer.Balancer {
 }
 
 type loader struct {
-	*option
+	*balancer.Option
 
 	sync.Mutex
 	loads sync.Map
 }
 
-func newLoader(opt *option) balancer.Balancer {
+func newLoader(opt *balancer.Option) balancer.Balancer {
 	l := &loader{}
-	l.option = opt
+	l.Option = opt
 
 	return l
 }
 
-func (l *loader) Pick(ctx *core.ChannelContext) (core.SubChannel, error) {
-	conns, err := l.resolver.ResolveSubChannel(l.name)
+func (l *loader) Pick(ctx interface{}) (core.SubChannel, error) {
+	conns, err := l.Resolver.ResolveSubChannel(l.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -110,5 +90,5 @@ func (l *loader) selectLeastLoader(conns []core.SubChannel) (core.SubChannel, er
 }
 
 func (l *loader) ServName() string {
-	return l.name
+	return l.Name
 }

@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/amsalt/cluster/balancer"
-	"github.com/amsalt/cluster/balancer/roundrobin"
+	_ "github.com/amsalt/cluster/balancer/roundrobin" // for import
 	"github.com/amsalt/cluster/resolver"
 	"github.com/amsalt/nginet/core"
 )
@@ -56,42 +56,75 @@ func (b *builder) Build(opt ...balancer.BuildOption) balancer.Balancer {
 	}
 
 	if opts.dependency == nil {
-		opts.dependency = balancer.GetBuilder("roundrobin").Build(roundrobin.WithServName(opts.name), roundrobin.WithResolver(opts.resolver))
+		opts.dependency = balancer.GetBuilder("roundrobin").Build(balancer.WithServName(opts.name), balancer.WithResolver(opts.resolver))
 	}
 	return newStickiness(&opts)
 }
 
+type Storage interface {
+	// Get returns the SubChannel by key.
+	// The implementation must be thread-safe.
+	Get(key interface{}) core.SubChannel
+
+	// Set binds key with SubChannel.
+	// The implementation must be thread-safe.
+	Set(key interface{}, channel core.SubChannel)
+}
+
+type DefaultStorage struct {
+	sync.RWMutex
+	storage map[interface{}]core.SubChannel
+}
+
+func NewDefaultStorage() Storage {
+	s := new(DefaultStorage)
+	s.storage = make(map[interface{}]core.SubChannel)
+	return s
+}
+
+func (s DefaultStorage) Get(key interface{}) core.SubChannel {
+	s.RLock()
+	defer s.RUnlock()
+	return s.storage[key]
+}
+
+func (s DefaultStorage) Set(key interface{}, channel core.SubChannel) {
+	s.Lock()
+	defer s.Unlock()
+	s.storage[key] = channel
+}
+
 type option struct {
-	name          string // the service name to resolve
-	resolver      resolver.Resolver
+	name          string            // the service name to resolve
+	resolver      resolver.Resolver // the naming resolver
 	stickinessKey string
 	dependency    balancer.Balancer
+	storage       Storage
 }
 
 type stickiness struct {
 	sync.RWMutex
 
 	*option
-	storage map[interface{}]core.SubChannel
 }
 
 func newStickiness(opt *option) balancer.Balancer {
 	s := &stickiness{}
 	s.option = opt
-	s.storage = make(map[interface{}]core.SubChannel)
+	if s.storage == nil {
+		s.storage = NewDefaultStorage()
+	}
 	return s
 }
 
-func (s *stickiness) Pick(ctx *core.ChannelContext) (conn core.SubChannel, err error) {
+func (s *stickiness) Pick(ctx interface{}) (conn core.SubChannel, err error) {
 	if ctx == nil {
 		conn, err = s.selector(ctx)
 		return
 	}
-	stickinessKey := ctx.Attr().Value(s.stickinessKey)
+	stickinessKey := ctx
 	if stickinessKey != nil {
-		s.RLock()
-		stored := s.storage[stickinessKey]
-		s.RUnlock()
+		stored := s.storage.Get(stickinessKey)
 		if stored != nil {
 			return stored, nil
 		}
@@ -103,15 +136,13 @@ func (s *stickiness) Pick(ctx *core.ChannelContext) (conn core.SubChannel, err e
 	}
 
 	if stickinessKey != nil {
-		s.Lock()
-		s.storage[stickinessKey] = conn
-		s.Unlock()
+		s.storage.Set(stickinessKey, conn)
 	}
 
 	return
 }
 
-func (s *stickiness) selector(ctx *core.ChannelContext) (conn core.SubChannel, err error) {
+func (s *stickiness) selector(ctx interface{}) (conn core.SubChannel, err error) {
 	return s.dependency.Pick(ctx)
 }
 

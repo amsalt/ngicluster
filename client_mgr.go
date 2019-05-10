@@ -16,6 +16,7 @@ type connetInfo struct {
 	addr     string
 }
 
+type SubChannelMap map[string][]core.SubChannel
 type ChannelInfo map[interface{}]*connetInfo
 type ServiceClients map[string]*Client
 type ConnectedAddrs map[string][]string
@@ -29,6 +30,7 @@ type clientMgr struct {
 
 	clients ServiceClients // record the configuration.
 
+	subChannels    SubChannelMap  // record the conntected SubChannel
 	channelInfo    ChannelInfo    // record the connected information.
 	connectedAddrs ConnectedAddrs // record the connected address, for fast lookup.
 	connecting     ConnectingAddr // record the address connecting.
@@ -43,6 +45,7 @@ func newClientMgr(resolver resolver.Resolver) *clientMgr {
 	cm := &clientMgr{resolver: resolver}
 	cm.clients = make(ServiceClients)
 	cm.channelInfo = make(ChannelInfo)
+	cm.subChannels = make(SubChannelMap)
 	cm.connectedAddrs = make(ConnectedAddrs)
 	cm.balancers = make(Balancers)
 	cm.connecting = make(ConnectingAddr)
@@ -95,7 +98,7 @@ func (cm *clientMgr) syncService() {
 			}
 		}
 
-		time.Sleep(time.Second * 4)
+		time.Sleep(time.Second)
 	}
 
 closed:
@@ -113,8 +116,21 @@ func (cm *clientMgr) connect(t, addr string) {
 	subChannel, err := cm.clients[t].Connect(addr)
 	if err == nil {
 		cm.channelInfo[subChannel] = &connetInfo{addr: addr, servType: t}
-		delete(cm.connecting, addr)
+		cm.subChannels[t] = append(cm.subChannels[t], subChannel)
+		cm.connectedAddrs[t] = append(cm.connectedAddrs[t], addr)
+		cm.removeConnecting(t, addr)
 		cm.resolver.RegisterSubChannel(t, subChannel)
+	} else {
+		log.Errorf("connect server %+v failed %+v", addr, err)
+		cm.removeConnecting(t, addr)
+	}
+}
+
+func (cm *clientMgr) removeConnecting(servType, addr string) {
+	for i, a := range cm.connecting[servType] {
+		if a == addr {
+			cm.connecting[servType] = append(cm.connecting[servType][:i], cm.connecting[servType][i+1:]...)
+		}
 	}
 }
 
@@ -123,12 +139,14 @@ func (cm *clientMgr) isConnectedOrConnecting(servType, addr string) bool {
 	defer cm.rwMutex.RUnlock()
 
 	for _, a := range cm.connecting[servType] {
+		log.Debugf("connecting list: %+v", a)
 		if a == addr {
 			return true
 		}
 	}
 
 	for _, address := range cm.connectedAddrs[servType] {
+		log.Debugf("connected list: %+v", address)
 		if address == addr {
 			return true
 		}
@@ -145,7 +163,7 @@ func (cm *clientMgr) onDisconnected(ctx *core.ChannelContext) {
 	addr := info.addr
 	servType := info.servType
 	cm.removeAddr(servType, addr)
-	delete(cm.channelInfo, channel)
+	cm.removeChannel(servType, channel.(core.SubChannel))
 }
 
 func (cm *clientMgr) removeAddr(servType, addr string) {
@@ -154,4 +172,27 @@ func (cm *clientMgr) removeAddr(servType, addr string) {
 			cm.connectedAddrs[servType] = append(cm.connectedAddrs[servType][:i], cm.connectedAddrs[servType][i+1:]...)
 		}
 	}
+}
+
+func (cm *clientMgr) removeChannel(servType string, channel core.SubChannel) {
+	for i, c := range cm.subChannels[servType] {
+		if c == channel {
+			cm.subChannels[servType] = append(cm.subChannels[servType][:i], cm.subChannels[servType][i+1:]...)
+		}
+	}
+	delete(cm.channelInfo, channel)
+}
+
+func (cm *clientMgr) Channels(servType string) []core.SubChannel {
+	return cm.subChannels[servType]
+}
+
+func (cm *clientMgr) Write(servType string, msg interface{}, ctx interface{}) error {
+	b := cm.balancers[servType]
+	channel, err := b.Pick(ctx)
+	if err == nil {
+		channel.Write(msg)
+		return nil
+	}
+	return err
 }
