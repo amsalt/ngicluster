@@ -35,17 +35,17 @@ func TestCluster(t *testing.T) {
 	b := balancer.GetBuilder("stickiness").Build(stickiness.WithServName("game"), stickiness.WithResolver(resolver))
 	clus := cluster.NewCluster(resolver)
 
-	relayHandler := cluster.NewRelayHandler(clus, "userID")
+	relayHandler := cluster.NewRelayHandler("game", clus, "userID")
 	s := clus.NewServer("game")
 	s.InitAcceptor(nil, register, processMgr)
 	s.AddAfterHandler("IDParser", nil, "RelayHandler", relayHandler)
 	s.Listen(":7878")
 	go s.Accept()
 
-	// s1 := clus.NewServer("game")
-	// s1.InitAcceptor(nil, register, processMgr)
-	// s1.Listen(":7979")
-	// go s1.Accept()
+	s1 := clus.NewServer("game")
+	s1.InitAcceptor(nil, register, processMgr)
+	s1.Listen(":7979")
+	go s1.Accept()
 
 	c := cluster.NewClient()
 	c.InitConnector(nil, register, processMgr)
@@ -54,8 +54,8 @@ func TestCluster(t *testing.T) {
 	time.Sleep(time.Second * 2)
 
 	clus.Write("game", &tcpChannel{Msg: "cluster send message1"})
-	// clus.Write("game", &tcpChannel{Msg: "cluster send message2"})
-	// clus.Write("game", &tcpChannel{Msg: "cluster send message3"})
+	clus.Write("game", &tcpChannel{Msg: "cluster send message2"})
+	clus.Write("game", &tcpChannel{Msg: "cluster send message3"})
 	time.Sleep(15 * time.Second)
 
 }
