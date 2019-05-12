@@ -64,14 +64,15 @@ func (c *Client) InitConnector(executor core.Executor, register message.Register
 	idParser := handler.NewIDParser(register, parser)
 	serializer := handler.NewMessageSerializer(register, codec)
 	deserializer := handler.NewMessageDeserializer(register, codec)
+
 	c.connector.InitSubChannel(func(channel core.SubChannel) {
 		channel.Pipeline().AddLast(nil, "PacketLengthDecoder", handler.NewPacketLengthDecoder(2))
 		channel.Pipeline().AddLast(nil, "PacketLengthPrepender", handler.NewPacketLengthPrepender(2))
-		channel.Pipeline().AddLast(nil, "MessageEncoder", handler.NewMessageEncoder(serializer, idParser))
-		channel.Pipeline().AddLast(nil, "MessageDecoder", handler.NewMessageDecoder(deserializer, idParser))
+		channel.Pipeline().AddLast(nil, "MessageSerializer", serializer)
+		channel.Pipeline().AddLast(nil, "IDParser", idParser)
+		channel.Pipeline().AddLast(nil, "MessageDeserializer", deserializer)
 		channel.Pipeline().AddLast(nil, "OnOpenOrCloseHandler", c.handler)
 		channel.Pipeline().AddLast(c.executor, "MessageHandler", handler.NewDefaultMessageHandler(processorMgr))
-
 	})
 }
 
@@ -95,4 +96,12 @@ func (c *Client) OnConnect(f func(ctx *core.ChannelContext, channel core.Channel
 
 func (c *Client) SubChannelInitializer() func(channel core.SubChannel) {
 	return c.connector.SubChannelInitializer()
+}
+
+func (c *Client) AddAfterHandler(afterName string, executor core.Executor, name string, h interface{}) {
+	initialize := c.connector.SubChannelInitializer()
+	c.connector.InitSubChannel(func(channel core.SubChannel) {
+		initialize(channel)
+		channel.Pipeline().AddAfter(afterName, executor, name, h)
+	})
 }

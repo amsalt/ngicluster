@@ -14,6 +14,7 @@ type Cluster struct {
 	clientMgr       *clientMgr
 	balancerName    string
 	defaultBalancer balancer.Balancer
+	router          *relayRouter
 }
 
 func NewCluster(rsv resolver.Resolver, b ...string) *Cluster {
@@ -22,6 +23,7 @@ func NewCluster(rsv resolver.Resolver, b ...string) *Cluster {
 
 	cluster.clientMgr = newClientMgr(rsv)
 	cluster.clientMgr.Start()
+	cluster.router = newRelayRouter()
 
 	if len(b) > 0 {
 		cluster.balancerName = b[0]
@@ -58,4 +60,12 @@ func (cluster *Cluster) Write(servType string, msg interface{}, ctx ...interface
 		return cluster.clientMgr.Write(servType, msg, ctx[0])
 	}
 	return cluster.clientMgr.Write(servType, msg, nil)
+}
+
+func (cluster *Cluster) Register(msgID interface{}, servType string) {
+	cluster.router.Register(msgID, servType)
+}
+
+func (cluster *Cluster) Route(msgID interface{}) string {
+	return cluster.router.Route(msgID)
 }

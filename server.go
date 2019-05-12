@@ -115,3 +115,11 @@ func (s *Server) OnConnect(f func(ctx *core.ChannelContext, channel core.Channel
 func (s *Server) SubChannelInitializer() func(channel core.SubChannel) {
 	return s.acceptor.SubChannelInitializer()
 }
+
+func (s *Server) AddAfterHandler(afterName string, executor core.Executor, name string, h interface{}) {
+	initialize := s.acceptor.SubChannelInitializer()
+	s.acceptor.InitSubChannel(func(channel core.SubChannel) {
+		initialize(channel)
+		channel.Pipeline().AddAfter(afterName, executor, name, h)
+	})
+}
