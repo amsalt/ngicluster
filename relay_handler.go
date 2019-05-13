@@ -30,9 +30,8 @@ func NewRelayHandler(currentServType string, c *Cluster, stickinessKey ...string
 
 // OnRead called when reads new data.
 func (rh *RelayHandler) OnRead(ctx *core.ChannelContext, msg interface{}) {
-	log.Errorf("RelayHandler read: %+v", msg)
+	log.Debugf("RelayHandler read: %+v", msg)
 	if params, ok := msg.([]interface{}); ok && len(params) > 1 {
-		log.Errorf("RelayHandler parmas: %+v", msg)
 		id := params[0]
 		msgBuf, ok := params[1].(bytes.ReadOnlyBuffer)
 		if ok {
@@ -49,6 +48,7 @@ func (rh *RelayHandler) OnRead(ctx *core.ChannelContext, msg interface{}) {
 				}
 				rh.clus.Write(servType, newPacket, stickinessValue)
 			} else {
+				log.Errorf("no router map for msg: %+v", msg)
 				ctx.FireRead(msg)
 			}
 

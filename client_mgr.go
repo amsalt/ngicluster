@@ -146,7 +146,6 @@ func (cm *clientMgr) isConnectedOrConnecting(servType, addr string) bool {
 	}
 
 	for _, address := range cm.connectedAddrs[servType] {
-		log.Debugf("connected list: %+v", address)
 		if address == addr {
 			return true
 		}
@@ -180,6 +179,7 @@ func (cm *clientMgr) removeChannel(servType string, channel core.SubChannel) {
 			cm.subChannels[servType] = append(cm.subChannels[servType][:i], cm.subChannels[servType][i+1:]...)
 		}
 	}
+	cm.resolver.UnregisterSubChannel(servType, channel)
 	delete(cm.channelInfo, channel)
 }
 
