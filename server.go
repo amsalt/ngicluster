@@ -37,14 +37,14 @@ type Server struct {
 }
 
 // NewServer creates an empty Server instance.
-func NewServer(servType string, resolver resolver.Resolver, timeoutSec ...*TimeOutOpts) *Server {
+func NewServer(servType string, resolver resolver.Resolver, timeoutOpts ...*TimeOutOpts) *Server {
 	s := new(Server)
 	s.resolver = resolver
 	s.servType = servType
 	s.handler = newHandlerWrapper()
-	if len(timeoutSec) > 0 {
-		s.timeoutSec = timeoutSec[0].TimeoutSec
-		s.timeoutPeriodSec = timeoutSec[0].PeriodSec
+	if len(timeoutOpts) > 0 {
+		s.timeoutSec = timeoutOpts[0].TimeoutSec
+		s.timeoutPeriodSec = timeoutOpts[0].PeriodSec
 	}
 	return s
 }
