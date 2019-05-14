@@ -36,7 +36,7 @@ func TestCluster(t *testing.T) {
 	clus := cluster.NewCluster(resolver)
 
 	relayHandler := cluster.NewRelayHandler("game", clus, "userID")
-	s := clus.NewServer("game", &cluster.TimeOutOpts{TimeoutSec: 3, PeriodSec: 300})
+	s := clus.NewServer("game")
 	s.InitAcceptor(nil, register, processMgr)
 	s.AddAfterHandler("IDParser", nil, "RelayHandler", relayHandler)
 	s.Listen(":7878")

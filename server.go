@@ -14,11 +14,6 @@ import (
 	"github.com/amsalt/nginet/message/idparser"
 )
 
-type TimeOutOpts struct {
-	TimeoutSec int
-	PeriodSec  int
-}
-
 // Server represents a server-side server.
 type Server struct {
 	handler *handlerWrapper
@@ -37,21 +32,18 @@ type Server struct {
 }
 
 // NewServer creates an empty Server instance.
-func NewServer(servType string, resolver resolver.Resolver, timeoutOpts ...*TimeOutOpts) *Server {
+func NewServer(servType string, resolver resolver.Resolver) *Server {
 	s := new(Server)
 	s.resolver = resolver
 	s.servType = servType
 	s.handler = newHandlerWrapper()
-	if len(timeoutOpts) > 0 {
-		s.timeoutSec = timeoutOpts[0].TimeoutSec
-		s.timeoutPeriodSec = timeoutOpts[0].PeriodSec
-	}
+
 	return s
 }
 
 // NewServerWithBufSize creates an Server instance with readBufSize and writeBufSize.
-func NewServerWithBufSize(servType string, resolver resolver.Resolver, readBuf, writeBuf, maxConn int, timeoutSec ...*TimeOutOpts) *Server {
-	s := NewServer(servType, resolver, timeoutSec...)
+func NewServerWithBufSize(servType string, resolver resolver.Resolver, readBuf, writeBuf, maxConn int) *Server {
+	s := NewServer(servType, resolver)
 	s.readBuf = readBuf
 	s.writeBuf = writeBuf
 	s.maxConn = maxConn
@@ -86,10 +78,6 @@ func (s *Server) InitAcceptor(executor core.Executor, register message.Register,
 	deserializer := handler.NewMessageDeserializer(register, codec)
 
 	s.acceptor.InitSubChannel(func(channel core.SubChannel) {
-		if s.timeoutSec > 0 {
-			channel.Pipeline().AddLast(nil, "IdleStateHandler", handler.NewIdleStateHandler(s.timeoutSec, s.timeoutSec, true))
-			channel.Pipeline().AddLast(nil, "HeartbeatHandler", NewHeartbeatHandler(s.timeoutSec, s.timeoutPeriodSec))
-		}
 		channel.Pipeline().AddLast(nil, "PacketLengthDecoder", handler.NewPacketLengthDecoder(2))
 		channel.Pipeline().AddLast(nil, "PacketLengthPrepender", handler.NewPacketLengthPrepender(2))
 		channel.Pipeline().AddLast(nil, "MessageSerializer", serializer)
