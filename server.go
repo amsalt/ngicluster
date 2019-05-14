@@ -14,6 +14,11 @@ import (
 	"github.com/amsalt/nginet/message/idparser"
 )
 
+type TimeOutOpts struct {
+	TimeoutSec int
+	PeriodSec  int
+}
+
 // Server represents a server-side server.
 type Server struct {
 	handler *handlerWrapper
@@ -26,20 +31,27 @@ type Server struct {
 	executor                   core.Executor
 
 	acceptor core.AcceptorChannel
+
+	timeoutSec       int
+	timeoutPeriodSec int
 }
 
 // NewServer creates an empty Server instance.
-func NewServer(servType string, resolver resolver.Resolver) *Server {
+func NewServer(servType string, resolver resolver.Resolver, timeoutSec ...*TimeOutOpts) *Server {
 	s := new(Server)
 	s.resolver = resolver
 	s.servType = servType
 	s.handler = newHandlerWrapper()
+	if len(timeoutSec) > 0 {
+		s.timeoutSec = timeoutSec[0].TimeoutSec
+		s.timeoutPeriodSec = timeoutSec[0].PeriodSec
+	}
 	return s
 }
 
 // NewServerWithBufSize creates an Server instance with readBufSize and writeBufSize.
-func NewServerWithBufSize(servType string, resolver resolver.Resolver, readBuf, writeBuf, maxConn int) *Server {
-	s := NewServer(servType, resolver)
+func NewServerWithBufSize(servType string, resolver resolver.Resolver, readBuf, writeBuf, maxConn int, timeoutSec ...*TimeOutOpts) *Server {
+	s := NewServer(servType, resolver, timeoutSec...)
 	s.readBuf = readBuf
 	s.writeBuf = writeBuf
 	s.maxConn = maxConn
@@ -74,6 +86,10 @@ func (s *Server) InitAcceptor(executor core.Executor, register message.Register,
 	deserializer := handler.NewMessageDeserializer(register, codec)
 
 	s.acceptor.InitSubChannel(func(channel core.SubChannel) {
+		if s.timeoutSec > 0 {
+			channel.Pipeline().AddLast(nil, "IdleStateHandler", handler.NewIdleStateHandler(s.timeoutSec, s.timeoutSec, true))
+			channel.Pipeline().AddLast(nil, "HeartbeatHandler", NewHeartbeatHandler(s.timeoutSec, s.timeoutPeriodSec))
+		}
 		channel.Pipeline().AddLast(nil, "PacketLengthDecoder", handler.NewPacketLengthDecoder(2))
 		channel.Pipeline().AddLast(nil, "PacketLengthPrepender", handler.NewPacketLengthPrepender(2))
 		channel.Pipeline().AddLast(nil, "MessageSerializer", serializer)
@@ -100,8 +116,8 @@ func (s *Server) Accept() {
 	if s.resolver != nil {
 		s.resolver.Register(s.servType, s.addr)
 	}
-	s.acceptor.Accept()
 
+	s.acceptor.Accept()
 }
 
 func (s *Server) OnDisconnect(f func(ctx *core.ChannelContext)) {
@@ -121,5 +137,13 @@ func (s *Server) AddAfterHandler(afterName string, executor core.Executor, name 
 	s.acceptor.InitSubChannel(func(channel core.SubChannel) {
 		initialize(channel)
 		channel.Pipeline().AddAfter(afterName, executor, name, h)
+	})
+}
+
+func (s *Server) AddLastHandler(executor core.Executor, name string, h interface{}) {
+	initialize := s.acceptor.SubChannelInitializer()
+	s.acceptor.InitSubChannel(func(channel core.SubChannel) {
+		initialize(channel)
+		channel.Pipeline().AddLast(executor, name, h)
 	})
 }

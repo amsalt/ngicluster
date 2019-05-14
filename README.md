@@ -5,6 +5,7 @@ defines the communication strategy between servers, and implments message router
 - load balance
 - service discovery
 - message forwarding
+- configurable heartbeat check
 
 ## balancer
 - loader balancer

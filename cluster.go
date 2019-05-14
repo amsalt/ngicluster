@@ -38,8 +38,8 @@ func NewCluster(rsv resolver.Resolver, b ...string) *Cluster {
 	return cluster
 }
 
-func (cluster *Cluster) NewServer(servType string) *Server {
-	s := NewServer(servType, cluster.resolver)
+func (cluster *Cluster) NewServer(servType string, timeoutOpts ...*TimeOutOpts) *Server {
+	s := NewServer(servType, cluster.resolver, timeoutOpts...)
 	return s
 }
 
