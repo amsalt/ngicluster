@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	"github.com/amsalt/log"
-	"github.com/amsalt/netkit/message/packet"
 	"github.com/amsalt/nginet/bytes"
 	"github.com/amsalt/nginet/core"
+	"github.com/amsalt/nginet/message/packet"
 )
 
 // RelayHandler relays message by definition in relay router.
