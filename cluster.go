@@ -10,11 +10,10 @@ import (
 )
 
 type Cluster struct {
-	resolver        resolver.Resolver
-	clientMgr       *clientMgr
-	balancerName    string
-	defaultBalancer balancer.Balancer
-	router          *relayRouter
+	resolver     resolver.Resolver
+	clientMgr    *clientMgr
+	balancerName string
+	router       *relayRouter
 }
 
 func NewCluster(rsv resolver.Resolver, b ...string) *Cluster {
@@ -43,11 +42,17 @@ func (cluster *Cluster) NewServer(servType string) *Server {
 	return s
 }
 
+func (cluster *Cluster) NewServerWithConfig(servType string, readBuf, writeBuf, maxConn int) *Server {
+	s := NewServerWithConfig(servType, cluster.resolver, readBuf, writeBuf, maxConn)
+	return s
+}
+
 func (cluster *Cluster) AddClient(servType string, c *Client, b ...balancer.Balancer) {
 	if len(b) > 0 {
 		cluster.clientMgr.RegisterClient(servType, c, b[0])
 	} else {
-		cluster.defaultBalancer = balancer.GetBuilder(cluster.balancerName).Build(balancer.WithServName(servType), balancer.WithResolver(cluster.resolver))
+		defaultBalancer := balancer.GetBuilder(cluster.balancerName).Build(balancer.WithServName(servType), balancer.WithResolver(cluster.resolver))
+		cluster.clientMgr.RegisterClient(servType, c, defaultBalancer)
 	}
 }
 

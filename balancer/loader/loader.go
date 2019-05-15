@@ -50,7 +50,7 @@ func (l *loader) Pick(ctx interface{}) (core.SubChannel, error) {
 	}
 
 	if len(conns) <= 0 {
-		return nil, errors.New("no available balancer")
+		return nil, errors.New("no available connections")
 	}
 
 	return l.selectLeastLoader(conns)

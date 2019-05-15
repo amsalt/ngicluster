@@ -65,7 +65,7 @@ func (cm *clientMgr) Stop() {
 func (cm *clientMgr) RegisterClient(servType string, sc *Client, balancer balancer.Balancer) {
 	cm.rwMutex.Lock()
 	defer cm.rwMutex.Unlock()
-
+	log.Debugf("clientmgr register new client with balancer: %+v", balancer)
 	if cm.clients[servType] != nil {
 		panic(fmt.Errorf("duplicate register service client for type: %+v", servType))
 	}
@@ -120,6 +120,7 @@ func (cm *clientMgr) connect(t, addr string) {
 		cm.connectedAddrs[t] = append(cm.connectedAddrs[t], addr)
 		cm.removeConnecting(t, addr)
 		cm.resolver.RegisterSubChannel(t, subChannel)
+		log.Debugf("connect server %+v success", addr)
 	} else {
 		log.Errorf("connect server %+v failed %+v", addr, err)
 		cm.removeConnecting(t, addr)
@@ -189,7 +190,9 @@ func (cm *clientMgr) Channels(servType string) []core.SubChannel {
 
 func (cm *clientMgr) Write(servType string, msg interface{}, ctx interface{}) error {
 	b := cm.balancers[servType]
+
 	channel, err := b.Pick(ctx)
+	log.Errorf("clientMgr write channel: %+v, err: %+v", channel, err)
 	if err == nil {
 		channel.Write(msg)
 		return nil

@@ -31,6 +31,7 @@ func NewRelayHandler(currentServType string, c *Cluster, stickinessKey ...string
 
 // OnRead called when reads new data.
 func (rh *RelayHandler) OnRead(ctx *core.ChannelContext, msg interface{}) {
+	log.Debugf("RelayHandler onread: %+v", msg)
 	if params, ok := msg.([]interface{}); ok && len(params) > 1 {
 		id := params[0]
 		msgBuf, ok := params[1].(bytes.ReadOnlyBuffer)

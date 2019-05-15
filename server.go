@@ -42,8 +42,8 @@ func NewServer(servType string, resolver resolver.Resolver) *Server {
 	return s
 }
 
-// NewServerWithBufSize creates an Server instance with readBufSize and writeBufSize.
-func NewServerWithBufSize(servType string, resolver resolver.Resolver, readBuf, writeBuf, maxConn int) *Server {
+// NewServerWithConfig creates an Server instance with readBufSize and writeBufSize.
+func NewServerWithConfig(servType string, resolver resolver.Resolver, readBuf, writeBuf, maxConn int) *Server {
 	s := NewServer(servType, resolver)
 	s.readBuf = readBuf
 	s.writeBuf = writeBuf
@@ -115,6 +115,10 @@ func (s *Server) Accept() {
 	}
 
 	s.acceptor.Accept()
+}
+
+func (s *Server) Close() {
+	s.acceptor.Close()
 }
 
 func (s *Server) OnDisconnect(f func(ctx *core.ChannelContext)) {

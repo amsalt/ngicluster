@@ -1,6 +1,8 @@
 package static
 
 import (
+	"sync"
+
 	"github.com/amsalt/cluster/resolver"
 )
 
@@ -10,6 +12,7 @@ type NamingMap map[string][]string
 // ConfigBasedResolver represents a static configuration based resolver.
 // Generally used for test.
 type ConfigBasedResolver struct {
+	mutex  sync.Mutex
 	naming NamingMap
 	*resolver.BaseResolver
 }
@@ -24,6 +27,8 @@ func NewConfigBasedResolver() resolver.Resolver {
 
 // Register regiters new service at address with name.
 func (cbr *ConfigBasedResolver) Register(name, address string) {
+	cbr.mutex.Lock()
+	defer cbr.mutex.Unlock()
 	if ok, _ := contains(cbr.naming[name], address); !ok {
 		cbr.naming[name] = append(cbr.naming[name], address)
 	}
@@ -35,6 +40,8 @@ func (cbr *ConfigBasedResolver) Resolve(name string) (addrs []string, err error)
 }
 
 func (cbr *ConfigBasedResolver) ResolveMulti(names []string) ([]*resolver.ResolveEntry, error) {
+	cbr.mutex.Lock()
+	defer cbr.mutex.Unlock()
 	var result []*resolver.ResolveEntry
 	for _, n := range names {
 		result = append(result, &resolver.ResolveEntry{Name: n, Addrs: cbr.naming[n]})
