@@ -8,6 +8,12 @@ import (
 
 // package resolver privides the service discovery strategy.
 
+// ResolveEntry represents a service's address information.
+type ResolveEntry struct {
+	Name  string   // service name or type
+	Addrs []string // service address list
+}
+
 // Resolver represents a naming service which used for service discovery.
 // By this, can register new a service at address with name,and also resolve the name
 // and return all services named `name`
@@ -19,6 +25,9 @@ type Resolver interface {
 
 	// Resolve resolves the name and return a address list.
 	Resolve(name string) (addrs []string, err error)
+
+	// ResolveMulti resolves multiple services list.
+	ResolveMulti(names []string) ([]*ResolveEntry, error)
 
 	// ResolveSubChannel resolves the name and return a SubChannel list.
 	ResolveSubChannel(name string) (conns []core.SubChannel, err error)

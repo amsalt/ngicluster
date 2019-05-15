@@ -7,6 +7,7 @@ import (
 	"github.com/amsalt/cluster/resolver"
 	"github.com/amsalt/nginet/core"
 	"github.com/amsalt/nginet/core/tcp"
+	"github.com/amsalt/nginet/core/ws"
 	"github.com/amsalt/nginet/encoding"
 	"github.com/amsalt/nginet/encoding/json"
 	"github.com/amsalt/nginet/handler"
@@ -61,7 +62,7 @@ func (s *Server) SetAcceptor(acceptor core.AcceptorChannel) {
 }
 
 // InitAcceptor inits a customized AcceptorChannel.
-func (s *Server) InitAcceptor(executor core.Executor, register message.Register, processorMgr message.ProcessorMgr) {
+func (s *Server) InitAcceptor(executor core.Executor, register message.Register, processorMgr message.ProcessorMgr, servBuilder ...string) {
 	s.readBuf = DefaultReadBufSize
 	s.writeBuf = DefaultWriteBufSize
 
@@ -70,6 +71,14 @@ func (s *Server) InitAcceptor(executor core.Executor, register message.Register,
 		tcp.WithWriteBufSize(s.writeBuf),
 		tcp.WithMaxConnNum(s.maxConn),
 	)
+
+	if len(servBuilder) > 0 && servBuilder[0] == core.WebsocketServBuilder {
+		s.acceptor = core.GetAcceptorBuilder(core.WebsocketServBuilder).Build(
+			ws.WithReadBufSize(s.readBuf),
+			ws.WithWriteBufSize(s.writeBuf),
+			ws.WithMaxConnNum(s.maxConn),
+		)
+	}
 
 	parser := idparser.NewUint16ID()
 	codec := encoding.MustGetCodec(json.CodecJSON)
@@ -84,7 +93,7 @@ func (s *Server) InitAcceptor(executor core.Executor, register message.Register,
 		channel.Pipeline().AddLast(nil, "IDParser", idParser)
 		channel.Pipeline().AddLast(nil, "MessageDeserializer", deserializer)
 		channel.Pipeline().AddLast(executor, "processor", handler.NewDefaultMessageHandler(processorMgr))
-		channel.Pipeline().AddLast(nil, "OnOpenOrCloseHandler", s.handler)
+		channel.Pipeline().AddLast(executor, "OnOpenOrCloseHandler", s.handler)
 	})
 }
 

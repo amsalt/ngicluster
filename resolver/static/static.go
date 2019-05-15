@@ -34,6 +34,14 @@ func (cbr *ConfigBasedResolver) Resolve(name string) (addrs []string, err error)
 	return cbr.naming[name], nil
 }
 
+func (cbr *ConfigBasedResolver) ResolveMulti(names []string) ([]*resolver.ResolveEntry, error) {
+	var result []*resolver.ResolveEntry
+	for _, n := range names {
+		result = append(result, &resolver.ResolveEntry{Name: n, Addrs: cbr.naming[n]})
+	}
+	return result, nil
+}
+
 func contains(arr []string, e string) (bool, int) {
 	for i, item := range arr {
 		if item == e {

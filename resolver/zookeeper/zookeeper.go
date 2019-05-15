@@ -1,10 +1,10 @@
 package zookeeper
 
 import (
-	"log"
 	"time"
 
 	"github.com/amsalt/cluster/resolver"
+	"github.com/amsalt/log"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
@@ -43,10 +43,27 @@ func (z *zookeeper) Resolve(servType string) (list []string, err error) {
 	return
 }
 
+// ResolveMulti resolves multiple services list.
+func (z *zookeeper) ResolveMulti(names []string) ([]*resolver.ResolveEntry, error) {
+	var result []*resolver.ResolveEntry
+	var err error
+	for _, n := range names {
+		addrs, _, errs := z.conn.Children(z.root + "/" + n)
+		if errs != nil {
+			err = errs
+			log.Errorf("zookeeper resolve multiple service failed %+v", errs)
+			continue
+		}
+		result = append(result, &resolver.ResolveEntry{Name: n, Addrs: addrs})
+	}
+
+	return result, err
+}
+
 func (z *zookeeper) init() {
 	conn, _, err := zk.Connect(z.hosts, z.timeout)
 	if err != nil {
-		log.Printf("zkPlugin init error: %v", err)
+		log.Errorf("zkPlugin init error: %v", err)
 		return
 	}
 

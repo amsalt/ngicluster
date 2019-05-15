@@ -2,11 +2,11 @@ package etcd
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/amsalt/cluster/resolver"
+	"github.com/amsalt/log"
 	"go.etcd.io/etcd/client"
 )
 
@@ -59,6 +59,23 @@ func (etcd *Etcd) Resolve(serverType string) (list []string, err error) {
 	return nil, err
 }
 
+// ResolveMulti resolves multiple services list.
+func (etcd *Etcd) ResolveMulti(names []string) ([]*resolver.ResolveEntry, error) {
+	var result []*resolver.ResolveEntry
+	var err error
+	for _, n := range names {
+		addrs, errs := etcd.Resolve(n)
+		if errs != nil {
+			err = errs
+			log.Errorf("zookeeper resolve multiple service failed %+v", errs)
+			continue
+		}
+		result = append(result, &resolver.ResolveEntry{Name: n, Addrs: addrs})
+	}
+
+	return result, err
+}
+
 func (etcd *Etcd) heartbeat(serverType, host string) {
 	path := etcd.root + "/" + serverType + "/" + host
 	for {
@@ -66,7 +83,7 @@ func (etcd *Etcd) heartbeat(serverType, host string) {
 			TTL: time.Second * 10,
 		})
 		if err != nil {
-			fmt.Printf("EtcdPlugin heartbeat error: %v", err)
+			log.Errorf("EtcdPlugin heartbeat error: %v", err)
 		}
 		time.Sleep(time.Second * 4)
 	}
