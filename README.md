@@ -1,5 +1,5 @@
 # Cluster
-defines the communication strategy between servers, and implments message router&forwarding, auto service discovery and load balance.
+defines the communication strategy between servers, and implments message router&relay, auto service discovery and load balance.
 
 ## featrues
 - load balance

@@ -1,4 +1,4 @@
-package cluster
+package ngicluster
 
 // ExtraMsg represents a extra message for relay which stores some information.
 type ExtraMsg struct {

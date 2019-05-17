@@ -3,7 +3,7 @@ package static
 import (
 	"sync"
 
-	"github.com/amsalt/cluster/resolver"
+	"github.com/amsalt/ngicluster/resolver"
 )
 
 // NamingMap represents a map, which key is name, value is address array.

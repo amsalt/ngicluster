@@ -1,13 +1,13 @@
-package cluster
+package ngicluster
 
 import (
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/amsalt/cluster/balancer"
-	"github.com/amsalt/cluster/resolver"
 	"github.com/amsalt/log"
+	"github.com/amsalt/ngicluster/balancer"
+	"github.com/amsalt/ngicluster/resolver"
 	"github.com/amsalt/nginet/core"
 )
 

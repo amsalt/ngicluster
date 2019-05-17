@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/amsalt/cluster/balancer"
+	"github.com/amsalt/ngicluster/balancer"
 	"github.com/amsalt/nginet/core"
 )
 

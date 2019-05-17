@@ -1,12 +1,12 @@
-package cluster
+package ngicluster
 
 import (
-	"github.com/amsalt/cluster/balancer"
-	_ "github.com/amsalt/cluster/balancer/loader" // for import
-	_ "github.com/amsalt/cluster/balancer/random"
-	_ "github.com/amsalt/cluster/balancer/roundrobin"
-	"github.com/amsalt/cluster/resolver"
 	"github.com/amsalt/log"
+	"github.com/amsalt/ngicluster/balancer"
+	_ "github.com/amsalt/ngicluster/balancer/loader" // for import
+	_ "github.com/amsalt/ngicluster/balancer/random"
+	_ "github.com/amsalt/ngicluster/balancer/roundrobin"
+	"github.com/amsalt/ngicluster/resolver"
 	"github.com/amsalt/nginet/core"
 )
 

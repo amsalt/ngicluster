@@ -4,8 +4,8 @@ import (
 	"errors"
 	"math/rand"
 
-	"github.com/amsalt/cluster/balancer"
 	"github.com/amsalt/log"
+	"github.com/amsalt/ngicluster/balancer"
 	"github.com/amsalt/nginet/core"
 )
 

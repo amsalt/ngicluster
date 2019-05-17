@@ -1,11 +1,11 @@
-package cluster
+package ngicluster
 
 import (
 	"github.com/amsalt/log"
 	"github.com/amsalt/nginet/core"
 )
 
-// package cluster implementats the communication between internal servers.
+// package ngicluster implementats the communication between internal servers.
 
 const (
 	// DefaultReadBufSize sets the default ReadBufSize as 100k.

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/amsalt/cluster/balancer"
 	"github.com/amsalt/log"
+	"github.com/amsalt/ngicluster/balancer"
 	"github.com/amsalt/nginet/core"
 )
 

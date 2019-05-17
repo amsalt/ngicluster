@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/amsalt/cluster"
-	"github.com/amsalt/cluster/balancer"
-	"github.com/amsalt/cluster/balancer/stickiness"
-	"github.com/amsalt/cluster/resolver/static"
 	"github.com/amsalt/log"
+	"github.com/amsalt/ngicluster"
+	"github.com/amsalt/ngicluster/balancer"
+	"github.com/amsalt/ngicluster/balancer/stickiness"
+	"github.com/amsalt/ngicluster/resolver/static"
 	"github.com/amsalt/nginet/core"
 	"github.com/amsalt/nginet/message"
 )
@@ -33,9 +33,9 @@ func TestCluster(t *testing.T) {
 	})
 
 	b := balancer.GetBuilder("stickiness").Build(stickiness.WithServName("game"), stickiness.WithResolver(resolver))
-	clus := cluster.NewCluster(resolver)
+	clus := ngicluster.NewCluster(resolver)
 
-	relayHandler := cluster.NewRelayHandler("game", clus, "userID")
+	relayHandler := ngicluster.NewRelayHandler("game", clus, "userID")
 	s := clus.NewServer("game")
 	s.InitAcceptor(nil, register, processMgr)
 	s.AddAfterHandler("IDParser", nil, "RelayHandler", relayHandler)
@@ -47,7 +47,7 @@ func TestCluster(t *testing.T) {
 	s1.Listen(":7979")
 	go s1.Accept()
 
-	c := cluster.NewClient()
+	c := ngicluster.NewClient()
 	c.InitConnector(nil, register, processMgr)
 
 	clus.AddClient("game", c, b)

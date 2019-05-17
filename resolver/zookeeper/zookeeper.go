@@ -3,8 +3,8 @@ package zookeeper
 import (
 	"time"
 
-	"github.com/amsalt/cluster/resolver"
 	"github.com/amsalt/log"
+	"github.com/amsalt/ngicluster/resolver"
 	"github.com/samuel/go-zookeeper/zk"
 )
 

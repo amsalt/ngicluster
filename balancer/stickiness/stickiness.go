@@ -3,10 +3,10 @@ package stickiness
 import (
 	"sync"
 
-	"github.com/amsalt/cluster/balancer"
-	_ "github.com/amsalt/cluster/balancer/roundrobin" // for import
-	"github.com/amsalt/cluster/resolver"
 	"github.com/amsalt/log"
+	"github.com/amsalt/ngicluster/balancer"
+	_ "github.com/amsalt/ngicluster/balancer/roundrobin" // for import
+	"github.com/amsalt/ngicluster/resolver"
 	"github.com/amsalt/nginet/core"
 )
 
@@ -98,16 +98,17 @@ func (s DefaultStorage) Set(servName string, key interface{}, channel core.SubCh
 func (s DefaultStorage) Del(servName string, key interface{}) {
 	s.Lock()
 	defer s.Unlock()
+
 	toDelete := s.storage[servName]
 	delete(toDelete, key)
 }
 
 type option struct {
-	name          string            // the service name to resolve
-	resolver      resolver.Resolver // the naming resolver
-	stickinessKey string
-	dependency    balancer.Balancer
-	storage       balancer.Storage
+	name          string            // the service name to resolve.
+	resolver      resolver.Resolver // the naming resolver.
+	stickinessKey string            // the name of stickiness key.
+	dependency    balancer.Balancer // if not found target Channel, will use dependency as default Balancer.
+	storage       balancer.Storage  // records the load balancer mapping.
 }
 
 type stickiness struct {

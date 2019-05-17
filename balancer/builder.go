@@ -3,7 +3,7 @@ package balancer
 import (
 	"fmt"
 
-	"github.com/amsalt/cluster/resolver"
+	"github.com/amsalt/ngicluster/resolver"
 )
 
 // Builder creates a Balancer.

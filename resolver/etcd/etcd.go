@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/amsalt/cluster/resolver"
 	"github.com/amsalt/log"
+	"github.com/amsalt/ngicluster/resolver"
 	"go.etcd.io/etcd/client"
 )
 
