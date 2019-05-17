@@ -6,6 +6,7 @@ import (
 	"github.com/amsalt/cluster/balancer"
 	_ "github.com/amsalt/cluster/balancer/roundrobin" // for import
 	"github.com/amsalt/cluster/resolver"
+	"github.com/amsalt/log"
 	"github.com/amsalt/nginet/core"
 )
 
@@ -42,6 +43,13 @@ func WithDependentBalancer(b balancer.Balancer) balancer.BuildOption {
 	}
 }
 
+// WithStorage sets storage for balancer.
+func WithStorage(s balancer.Storage) balancer.BuildOption {
+	return func(o interface{}) {
+		o.(*option).storage = s
+	}
+}
+
 type builder struct {
 }
 
@@ -61,37 +69,37 @@ func (b *builder) Build(opt ...balancer.BuildOption) balancer.Balancer {
 	return newStickiness(&opts)
 }
 
-type Storage interface {
-	// Get returns the SubChannel by key.
-	// The implementation must be thread-safe.
-	Get(key interface{}) core.SubChannel
-
-	// Set binds key with SubChannel.
-	// The implementation must be thread-safe.
-	Set(key interface{}, channel core.SubChannel)
-}
-
 type DefaultStorage struct {
 	sync.RWMutex
-	storage map[interface{}]core.SubChannel
+	storage map[string]map[interface{}]core.SubChannel
 }
 
-func NewDefaultStorage() Storage {
+func NewDefaultStorage() balancer.Storage {
 	s := new(DefaultStorage)
-	s.storage = make(map[interface{}]core.SubChannel)
+	s.storage = make(map[string]map[interface{}]core.SubChannel)
 	return s
 }
 
-func (s DefaultStorage) Get(key interface{}) core.SubChannel {
+func (s DefaultStorage) Get(servName string, key interface{}) core.SubChannel {
 	s.RLock()
 	defer s.RUnlock()
-	return s.storage[key]
+	return s.storage[servName][key]
 }
 
-func (s DefaultStorage) Set(key interface{}, channel core.SubChannel) {
+func (s DefaultStorage) Set(servName string, key interface{}, channel core.SubChannel) {
 	s.Lock()
 	defer s.Unlock()
-	s.storage[key] = channel
+	if s.storage[servName] == nil {
+		s.storage[servName] = make(map[interface{}]core.SubChannel)
+	}
+	s.storage[servName][key] = channel
+}
+
+func (s DefaultStorage) Del(servName string, key interface{}) {
+	s.Lock()
+	defer s.Unlock()
+	toDelete := s.storage[servName]
+	delete(toDelete, key)
 }
 
 type option struct {
@@ -99,7 +107,7 @@ type option struct {
 	resolver      resolver.Resolver // the naming resolver
 	stickinessKey string
 	dependency    balancer.Balancer
-	storage       Storage
+	storage       balancer.Storage
 }
 
 type stickiness struct {
@@ -117,26 +125,43 @@ func newStickiness(opt *option) balancer.Balancer {
 	return s
 }
 
-func (s *stickiness) Pick(ctx interface{}) (conn core.SubChannel, err error) {
-	if ctx == nil {
-		conn, err = s.selector(ctx)
+// Pick support key or map as params.
+func (s *stickiness) Pick(params interface{}) (conn core.SubChannel, err error) {
+	if params == nil {
+		conn, err = s.selector(params)
 		return
 	}
-	stickinessKey := ctx
-	if stickinessKey != nil {
-		stored := s.storage.Get(stickinessKey)
+
+	if data, ok := params.(map[string]interface{}); ok {
+		if s.stickinessKey != "" && data[s.stickinessKey] != nil {
+			stored := s.storage.Get(s.name, data[s.stickinessKey])
+			if stored != nil {
+				return stored, nil
+			}
+		}
+	} else if key, ok := params.(string); ok {
+		stored := s.storage.Get(s.name, key)
 		if stored != nil {
 			return stored, nil
 		}
+	} else {
+		log.Errorf("unsupported params type: %T", params)
+		return
 	}
 
-	conn, err = s.selector(ctx)
+	conn, err = s.selector(params)
 	if err != nil {
 		return
 	}
 
-	if stickinessKey != nil {
-		s.storage.Set(stickinessKey, conn)
+	if params != nil {
+		if data, ok := params.(map[string]interface{}); ok {
+			if s.stickinessKey != "" && data[s.stickinessKey] != nil {
+				s.storage.Set(s.name, data[s.stickinessKey], conn)
+			}
+		} else if key, ok := params.(string); ok {
+			s.storage.Set(s.name, key, conn)
+		}
 	}
 
 	return

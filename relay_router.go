@@ -1,6 +1,9 @@
 package cluster
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type MsgID2ServType map[interface{}]string
 type relayRouter struct {
@@ -18,12 +21,12 @@ func newRelayRouter() *relayRouter {
 func (rr *relayRouter) Register(msgID interface{}, servType string) {
 	rr.Lock()
 	defer rr.Unlock()
-	rr.msgID2ServType[msgID] = servType
+	rr.msgID2ServType[fmt.Sprintf("%v", msgID)] = servType
 }
 
 func (rr *relayRouter) Route(msgID interface{}) string {
 	rr.Lock()
 	defer rr.Unlock()
 
-	return rr.msgID2ServType[msgID]
+	return rr.msgID2ServType[fmt.Sprintf("%v", msgID)]
 }

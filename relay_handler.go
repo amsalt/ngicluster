@@ -36,9 +36,11 @@ func (rh *RelayHandler) OnRead(ctx *core.ChannelContext, msg interface{}) {
 		id := params[0]
 		msgBuf, ok := params[1].(bytes.ReadOnlyBuffer)
 		if ok {
+			log.Debugf("RelayHandler.OnRead params check passed")
 			servType := rh.clus.Route(id)
+			log.Debugf("RelayHandler.OnRead server type: %+v", servType)
 			if servType != "" && servType != rh.currentServType {
-
+				log.Debugf("found router for msg: %+v", id)
 				buf := make([]byte, msgBuf.Len())
 				copy(buf, msgBuf.Bytes()[0:])
 				newPacket := packet.NewRawPacket(id, buf)
@@ -46,11 +48,20 @@ func (rh *RelayHandler) OnRead(ctx *core.ChannelContext, msg interface{}) {
 				var stickinessValue interface{}
 				if rh.stickinessKey != "" {
 					stickinessValue = ctx.Attr().Value(rh.stickinessKey)
+
+					// test code
+					// rh.stickinessKey = "UserID"
+					// stickinessValue = "test"
+				}
+				if stickinessValue != nil {
+					params := make(map[string]interface{})
+					params[rh.stickinessKey] = stickinessValue
+					rh.clus.Write(servType, newPacket, params)
+				} else {
+					rh.clus.Write(servType, newPacket, stickinessValue)
 				}
 
-				rh.clus.Write(servType, newPacket, stickinessValue)
 			} else {
-				log.Warningf("no information found in router map for msg: %+v", msg)
 				ctx.FireRead(msg)
 			}
 			return

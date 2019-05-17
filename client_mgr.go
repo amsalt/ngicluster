@@ -20,7 +20,7 @@ type SubChannelMap map[string][]core.SubChannel
 type ChannelInfo map[interface{}]*connetInfo
 type ServiceClients map[string]*Client
 type ConnectedAddrs map[string][]string
-type Balancers map[string]balancer.Balancer
+
 type ConnectingAddr map[string][]string
 
 type clientMgr struct {
@@ -115,16 +115,20 @@ func (cm *clientMgr) connect(t, addr string) {
 	cm.connecting[t] = append(cm.connecting[t], addr)
 	subChannel, err := cm.clients[t].Connect(addr)
 	if err == nil {
-		cm.channelInfo[subChannel] = &connetInfo{addr: addr, servType: t}
-		cm.subChannels[t] = append(cm.subChannels[t], subChannel)
-		cm.connectedAddrs[t] = append(cm.connectedAddrs[t], addr)
+		cm.newChannel(subChannel, addr, t)
 		cm.removeConnecting(t, addr)
 		cm.resolver.RegisterSubChannel(t, subChannel)
 		log.Debugf("connect server %+v success", addr)
 	} else {
-		log.Errorf("connect server %+v failed %+v", addr, err)
 		cm.removeConnecting(t, addr)
+		log.Errorf("connect server %+v failed %+v", addr, err)
 	}
+}
+
+func (cm *clientMgr) newChannel(subChannel core.SubChannel, addr string, servType string) {
+	cm.channelInfo[subChannel] = &connetInfo{addr: addr, servType: servType}
+	cm.subChannels[servType] = append(cm.subChannels[servType], subChannel)
+	cm.connectedAddrs[servType] = append(cm.connectedAddrs[servType], addr)
 }
 
 func (cm *clientMgr) removeConnecting(servType, addr string) {
@@ -191,10 +195,18 @@ func (cm *clientMgr) Channels(servType string) []core.SubChannel {
 func (cm *clientMgr) Write(servType string, msg interface{}, ctx interface{}) error {
 	b := cm.balancers[servType]
 
+	if b == nil {
+		return fmt.Errorf("no balancer found for service: %+v", servType)
+	}
+
 	channel, err := b.Pick(ctx)
-	log.Errorf("clientMgr write channel: %+v, err: %+v", channel, err)
 	if err == nil {
-		channel.Write(msg)
+		if ctx != nil {
+			channel.Write(msg, &ExtraMsg{Params: ctx})
+		} else {
+			channel.Write(msg)
+		}
+
 		return nil
 	}
 	return err

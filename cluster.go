@@ -6,8 +6,11 @@ import (
 	_ "github.com/amsalt/cluster/balancer/random"
 	_ "github.com/amsalt/cluster/balancer/roundrobin"
 	"github.com/amsalt/cluster/resolver"
+	"github.com/amsalt/log"
 	"github.com/amsalt/nginet/core"
 )
+
+type Balancers map[string]balancer.Balancer
 
 type Cluster struct {
 	resolver     resolver.Resolver
@@ -61,6 +64,7 @@ func (cluster *Cluster) Clients(servType string) []core.SubChannel {
 }
 
 func (cluster *Cluster) Write(servType string, msg interface{}, ctx ...interface{}) error {
+	log.Debugf("cluster write msg to %+v, params: %+v", servType, ctx)
 	if len(ctx) > 0 {
 		return cluster.clientMgr.Write(servType, msg, ctx[0])
 	}

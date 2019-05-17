@@ -55,6 +55,7 @@ func (c *Client) SetConnector(connector core.ConnectorChannel) {
 
 // InitConnector inits a customized ConnectorChannel.
 func (c *Client) InitConnector(executor core.Executor, register message.Register, processorMgr message.ProcessorMgr) {
+
 	c.readBuf = DefaultReadBufSize
 	c.writeBuf = DefaultWriteBufSize
 
@@ -71,6 +72,7 @@ func (c *Client) InitConnector(executor core.Executor, register message.Register
 		channel.Pipeline().AddLast(nil, "MessageSerializer", serializer)
 		channel.Pipeline().AddLast(nil, "IDParser", idParser)
 		channel.Pipeline().AddLast(nil, "MessageDeserializer", deserializer)
+		channel.Pipeline().AddLast(nil, "CombinedEncoder", handler.NewCombinedEncoder(serializer, idParser))
 		channel.Pipeline().AddLast(nil, "OnOpenOrCloseHandler", c.handler)
 		channel.Pipeline().AddLast(c.executor, "MessageHandler", handler.NewDefaultMessageHandler(processorMgr))
 	})

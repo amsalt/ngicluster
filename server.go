@@ -2,9 +2,13 @@ package cluster
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
+	"github.com/amsalt/cluster/balancer"
+	"github.com/amsalt/cluster/consts"
 	"github.com/amsalt/cluster/resolver"
+	"github.com/amsalt/log"
 	"github.com/amsalt/nginet/core"
 	"github.com/amsalt/nginet/core/tcp"
 	"github.com/amsalt/nginet/core/ws"
@@ -30,6 +34,9 @@ type Server struct {
 
 	timeoutSec       int
 	timeoutPeriodSec int
+
+	balancers Balancers // record balancer for each service type.
+	storage   balancer.Storage
 }
 
 // NewServer creates an empty Server instance.
@@ -38,6 +45,7 @@ func NewServer(servType string, resolver resolver.Resolver) *Server {
 	s.resolver = resolver
 	s.servType = servType
 	s.handler = newHandlerWrapper()
+	s.balancers = make(Balancers)
 
 	return s
 }
@@ -63,6 +71,9 @@ func (s *Server) SetAcceptor(acceptor core.AcceptorChannel) {
 
 // InitAcceptor inits a customized AcceptorChannel.
 func (s *Server) InitAcceptor(executor core.Executor, register message.Register, processorMgr message.ProcessorMgr, servBuilder ...string) {
+	// register extra message
+	register.RegisterMsgByID(consts.ExtraMsgID, &ExtraMsg{}).SetCodec(encoding.MustGetCodec(json.CodecJSON))
+
 	s.readBuf = DefaultReadBufSize
 	s.writeBuf = DefaultWriteBufSize
 
@@ -89,6 +100,7 @@ func (s *Server) InitAcceptor(executor core.Executor, register message.Register,
 	s.acceptor.InitSubChannel(func(channel core.SubChannel) {
 		channel.Pipeline().AddLast(nil, "PacketLengthDecoder", handler.NewPacketLengthDecoder(2))
 		channel.Pipeline().AddLast(nil, "PacketLengthPrepender", handler.NewPacketLengthPrepender(2))
+		channel.Pipeline().AddLast(nil, "CombinedDecoder", handler.NewCombinedDecoder(deserializer, idParser))
 		channel.Pipeline().AddLast(nil, "MessageSerializer", serializer)
 		channel.Pipeline().AddLast(nil, "IDParser", idParser)
 		channel.Pipeline().AddLast(nil, "MessageDeserializer", deserializer)
@@ -147,4 +159,28 @@ func (s *Server) AddLastHandler(executor core.Executor, name string, h interface
 		initialize(channel)
 		channel.Pipeline().AddLast(executor, name, h)
 	})
+}
+
+func (s *Server) SetBalancer(servName string, b balancer.Balancer) {
+	s.balancers[servName] = b
+}
+
+func (s *Server) GetBalancer(servName string) balancer.Balancer {
+	return s.balancers[servName]
+}
+
+func (s *Server) Write(servName string, msg interface{}, key interface{}) error {
+	b := s.balancers[servName]
+
+	if b == nil {
+		return fmt.Errorf("no balancer found for service: %+v", servName)
+	}
+
+	channel, err := b.Pick(key)
+	log.Debugf("Server write channel: %+v, err: %+v", channel, err)
+	if err == nil {
+		channel.Write(msg)
+		return nil
+	}
+	return err
 }
