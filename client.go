@@ -88,6 +88,30 @@ func (c *Client) Connect(addr string) (core.SubChannel, error) {
 	return c.connector.Connect(tcpAddr)
 }
 
+func (c *Client) onMgrClose(mgrOnClose func(ctx *core.ChannelContext)) {
+	f := c.handler.onClose
+	if f != nil {
+		c.handler.onClose = func(ctx *core.ChannelContext) {
+			f(ctx)
+			mgrOnClose(ctx)
+		}
+	} else {
+		c.handler.onClose = mgrOnClose
+	}
+}
+
+func (c *Client) onMgrConnect(mgrOnConnect func(ctx *core.ChannelContext, channel core.Channel)) {
+	f := c.handler.onConnect
+	if f != nil {
+		c.handler.onConnect = func(ctx *core.ChannelContext, channel core.Channel) {
+			mgrOnConnect(ctx, channel)
+			f(ctx, channel)
+		}
+	} else {
+		c.handler.onConnect = mgrOnConnect
+	}
+}
+
 func (c *Client) OnDisconnect(f func(ctx *core.ChannelContext)) {
 	c.handler.onClose = f
 }
@@ -106,4 +130,7 @@ func (c *Client) AddAfterHandler(afterName string, executor core.Executor, name 
 		initialize(channel)
 		channel.Pipeline().AddAfter(afterName, executor, name, h)
 	})
+}
+func (c *Client) Close() {
+	c.connector.Close()
 }

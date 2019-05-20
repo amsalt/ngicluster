@@ -63,6 +63,10 @@ func (cluster *Cluster) Clients(servType string) []core.SubChannel {
 	return cluster.clientMgr.Channels(servType)
 }
 
+func (cluster *Cluster) CloseClients() {
+	cluster.clientMgr.Close()
+}
+
 func (cluster *Cluster) Write(servType string, msg interface{}, ctx ...interface{}) error {
 	log.Debugf("cluster write msg to %+v, params: %+v", servType, ctx)
 	if len(ctx) > 0 {

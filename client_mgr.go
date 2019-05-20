@@ -70,7 +70,7 @@ func (cm *clientMgr) RegisterClient(servType string, sc *Client, balancer balanc
 		panic(fmt.Errorf("duplicate register service client for type: %+v", servType))
 	}
 	cm.caresServTypes = append(cm.caresServTypes, servType)
-	sc.OnDisconnect(cm.onDisconnected)
+	sc.onMgrClose(cm.onDisconnected)
 	cm.clients[servType] = sc
 	cm.balancers[servType] = balancer
 }
@@ -111,15 +111,22 @@ func (cm *clientMgr) connect(t, addr string) {
 	}
 
 	cm.rwMutex.Lock()
-	defer cm.rwMutex.Unlock()
 	cm.connecting[t] = append(cm.connecting[t], addr)
-	subChannel, err := cm.clients[t].Connect(addr)
-	if err == nil {
-		cm.newChannel(subChannel, addr, t)
+	cm.rwMutex.Unlock()
+
+	cm.clients[t].onMgrConnect(func(ctx *core.ChannelContext, channel core.Channel) {
+		cm.rwMutex.Lock()
+		defer cm.rwMutex.Unlock()
+		cm.newChannel(channel.(core.SubChannel), addr, t)
 		cm.removeConnecting(t, addr)
-		cm.resolver.RegisterSubChannel(t, subChannel)
+		cm.resolver.RegisterSubChannel(t, channel.(core.SubChannel))
 		log.Debugf("connect server %+v success", addr)
-	} else {
+	})
+
+	_, err := cm.clients[t].Connect(addr)
+	if err != nil {
+		cm.rwMutex.Lock()
+		defer cm.rwMutex.Unlock()
 		cm.removeConnecting(t, addr)
 		log.Errorf("connect server %+v failed %+v", addr, err)
 	}
@@ -190,6 +197,12 @@ func (cm *clientMgr) removeChannel(servType string, channel core.SubChannel) {
 
 func (cm *clientMgr) Channels(servType string) []core.SubChannel {
 	return cm.subChannels[servType]
+}
+
+func (cm *clientMgr) Close() {
+	for _, c := range cm.clients {
+		c.Close()
+	}
 }
 
 func (cm *clientMgr) Write(servType string, msg interface{}, ctx interface{}) error {
