@@ -109,6 +109,10 @@ func (s *Server) InitAcceptor(executor core.Executor, register message.Register,
 	})
 }
 
+func (s *Server) ServType() string {
+	return s.servType
+}
+
 func (s *Server) Listen(addr string) error {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 

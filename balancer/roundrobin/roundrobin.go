@@ -8,6 +8,8 @@ import (
 	"github.com/amsalt/nginet/core"
 )
 
+const Name = "roundrobin"
+
 func init() {
 	balancer.Register(&builder{})
 }
@@ -15,7 +17,7 @@ func init() {
 type builder struct{}
 
 func (*builder) Name() string {
-	return "roundrobin"
+	return Name
 }
 
 func (b *builder) Build(opt ...balancer.BuildOption) balancer.Balancer {

@@ -12,5 +12,5 @@ type ExtraMsg struct {
 
 // system reserved protocol ids is from 60000
 const (
-	SystemProtocolIdentifySelf = 60000
+	SystemIdentifySelf = 60000
 )

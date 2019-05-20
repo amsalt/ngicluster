@@ -10,6 +10,8 @@ import (
 	"github.com/amsalt/nginet/core"
 )
 
+const Name = "loader"
+
 func init() {
 	balancer.Register(&builder{})
 }
@@ -17,7 +19,7 @@ func init() {
 type builder struct{}
 
 func (*builder) Name() string {
-	return "loader"
+	return Name
 }
 
 func (b *builder) Build(opt ...balancer.BuildOption) balancer.Balancer {

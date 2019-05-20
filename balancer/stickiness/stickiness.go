@@ -10,6 +10,8 @@ import (
 	"github.com/amsalt/nginet/core"
 )
 
+const Name = "stickiness"
+
 func init() {
 	balancer.Register(&builder{})
 }
@@ -54,7 +56,7 @@ type builder struct {
 }
 
 func (b *builder) Name() string {
-	return "stickiness"
+	return Name
 }
 
 func (b *builder) Build(opt ...balancer.BuildOption) balancer.Balancer {
