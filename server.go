@@ -104,7 +104,9 @@ func (s *Server) InitAcceptor(executor core.Executor, register message.Register,
 		channel.Pipeline().AddLast(nil, "MessageSerializer", serializer)
 		channel.Pipeline().AddLast(nil, "IDParser", idParser)
 		channel.Pipeline().AddLast(nil, "MessageDeserializer", deserializer)
-		channel.Pipeline().AddLast(executor, "processor", handler.NewDefaultMessageHandler(processorMgr))
+		if processorMgr != nil {
+			channel.Pipeline().AddLast(executor, "processor", handler.NewDefaultMessageHandler(processorMgr))
+		}
 		channel.Pipeline().AddLast(executor, "OnOpenOrCloseHandler", s.handler)
 	})
 }

@@ -14,6 +14,10 @@ import (
 	"github.com/amsalt/nginet/message/idparser"
 )
 
+const (
+	MaxReconnectTimes = 20
+)
+
 // Client represents a client-side server.
 type Client struct {
 	handler *handlerWrapper
@@ -54,12 +58,17 @@ func (c *Client) SetConnector(connector core.ConnectorChannel) {
 }
 
 // InitConnector inits a customized ConnectorChannel.
-func (c *Client) InitConnector(executor core.Executor, register message.Register, processorMgr message.ProcessorMgr) {
+func (c *Client) InitConnector(executor core.Executor, register message.Register, processorMgr message.ProcessorMgr, autoReconnect ...bool) {
 
 	c.readBuf = DefaultReadBufSize
 	c.writeBuf = DefaultWriteBufSize
 
-	c.connector = tcp.NewClientChannel(&tcp.Options{WriteBufSize: c.writeBuf, ReadBufSize: c.readBuf})
+	if len(autoReconnect) > 0 {
+		c.connector = tcp.NewClientChannel(&tcp.Options{WriteBufSize: c.writeBuf, ReadBufSize: c.readBuf, AutoReconnect: autoReconnect[0], MaxReconnectTimes: MaxReconnectTimes})
+	} else {
+		c.connector = tcp.NewClientChannel(&tcp.Options{WriteBufSize: c.writeBuf, ReadBufSize: c.readBuf})
+	}
+
 	parser := idparser.NewUint16ID()
 	codec := encoding.MustGetCodec(json.CodecJSON)
 	idParser := handler.NewIDParser(register, parser)

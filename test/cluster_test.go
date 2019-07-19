@@ -48,7 +48,7 @@ func TestCluster(t *testing.T) {
 	go s1.Accept()
 
 	c := ngicluster.NewClient()
-	c.InitConnector(nil, register, processMgr)
+	c.InitConnector(nil, register, processMgr, true)
 
 	clus.AddClient("game", c, b)
 	time.Sleep(time.Second * 2)
